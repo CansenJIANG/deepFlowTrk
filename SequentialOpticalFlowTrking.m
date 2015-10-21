@@ -1,9 +1,15 @@
 %% Sequential Optical Flow Tracking
 %% Option 1: forward optical flow tracking
 %% Option 2： backward optical flow tracking
-function [paramDF] = SequentialOpticalFlowTrking(paramDF, opt)
+function [paramDF] = SequentialOpticalFlowTrking(paramDF, opt, nFrm)
+if nargin <3
+    nFrm = 6;
+else
+    nFrm = nFrm + 1;
+end
+
 if nargin <2 | opt== 1
-    opt = 1;
+    opt = 1; 
     stepsDirection = 1;
     endSeq = paramDF.endSeq;
     staSeq = paramDF.staSeq;
@@ -13,8 +19,15 @@ if opt==2
     stepsDirection = -1;
     endSeq = paramDF.staSeq;
     staSeq = paramDF.endSeq;
+elseif opt==3
+    stepsDirection = -1;
+    staSeq = paramDF.staSeq;
+    endSeq = paramDF.staSeq-nFrm;
+elseif opt==4
+    stepsDirection = 1;
+    staSeq = paramDF.endSeq;
+    endSeq = paramDF.endSeq+nFrm;
 end
-
 
 %% Starting Frame to track
 % load velodyne points
@@ -185,6 +198,14 @@ for methodOpt = 1
         BackwardTraj3D = traj3D; paramDF.BackwardTraj3D = BackwardTraj3D;
         BackwardTraj3Dproj = traj3Dproj; paramDF.BackwardTraj3Dproj = BackwardTraj3Dproj;
         BackwardLostIdx = lostIdx; paramDF.BackwardLostIdx = BackwardLostIdx;
+    elseif(opt==3)
+        BackwardTraj3D = traj3D; paramDF.nFrmBwdTraj3D = BackwardTraj3D;
+        BackwardTraj3Dproj = traj3Dproj; paramDF.nFrmBwdTraj3Dproj = BackwardTraj3Dproj;
+        BackwardLostIdx = lostIdx; paramDF.nFrmBwdLostIdx = BackwardLostIdx;      
+    elseif(opt==4)
+        ForwardTraj3D = traj3D; paramDF.nFrmFwdTraj3D = ForwardTraj3D;
+        ForwardTraj3Dproj = traj3Dproj; paramDF.nFrmFwdTraj3Dproj = ForwardTraj3Dproj;
+        ForwardLostIdx = lostIdx; paramDF.nFrmFwdLostIdx = ForwardLostIdx;
     end
 end
 

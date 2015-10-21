@@ -56,6 +56,7 @@ paramDF.P_velo_to_img = P_velo_to_img;
 %%
 %%
 %% Deep Matching for keyframe matching
+if 0
 % run deep matching algorithm
 showFig = 0;
 imgSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq).name];
@@ -115,8 +116,12 @@ end
 %% Start OF tracking
 tic; paramDF = SequentialOpticalFlowTrking(paramDF, 1); toc;
 tic; paramDF = SequentialOpticalFlowTrking(paramDF, 2); toc;
-
-
+tic; paramDF = SequentialOpticalFlowTrking(paramDF, 3); toc;
+tic; paramDF = SequentialOpticalFlowTrking(paramDF, 4); toc;
+save('flowDone.mat')
+else
+    load('flowDone.mat');
+end
 
 %%
 %%
@@ -168,50 +173,6 @@ paramDF.cmplTrajFwd3d = cmplTrajFwd3d(:,sampleIdx); paramDF.cmplTrajFwd2d = cmpl
 %%
 %%
 %% Incomplete Trajectories Construction
-if 0
-% Visualize incomplete last frame of trajectories
-imgK = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+paramDF.incmplTrajLnth).name];
-incmplTrajSta = paramDF.keyFrmSta3dPrj(1:2, paramDF.DM2d3dSta(:, 1));
-incmplTrajFwd = paramDF.ForwardTraj3Dproj{1,paramDF.incmplTrajLnth}(1:2, paramDF.DM2d3dSta(:, 1));
-showFeatureMatchesVertical(imread(imgSta), imread(imgK),...
-    incmplTrajSta(1:2, incmplTrajFwd(1,:)~=1)',...
-    incmplTrajFwd(1:2, incmplTrajFwd(1,:)~=1)');
-
-imgK = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-paramDF.incmplTrajLnth).name];
-incmplTrajEnd = paramDF.keyFrmEnd3dPrj(1:2, paramDF.DM2d3dEnd(:, 1));
-incmplTrajBkw = paramDF.BackwardTraj3Dproj{1,paramDF.incmplTrajLnth}(1:2, paramDF.DM2d3dEnd(:, 1));
-showFeatureMatchesVertical(imread(imgEnd), imread(imgK),...
-    incmplTrajEnd(1:2, incmplTrajBkw(1,:)~=1)',...
-    incmplTrajBkw(1:2, incmplTrajBkw(1,:)~=1)');
-
-% Consturcture Incomplete Trajectories
-incmplTrajFwd2d = []; incmplTrajBwd2d = []; gndIdxFwd = [];
-incmplTrajFwd3d = []; incmplTrajBwd3d = []; gndIdxBwd = [];
-for i = 1:paramDF.incmplTrajLnth
-    incmplTrajFwd2d = [incmplTrajFwd2d;paramDF.ForwardTraj3Dproj{1,i}(:, paramDF.DM2d3dSta(:, 1))];
-    incmplTrajBwd2d = [incmplTrajBwd2d;paramDF.BackwardTraj3Dproj{1,i}(:, paramDF.DM2d3dEnd(:, 1))];
-    incmplTrajFwd3d = [incmplTrajFwd3d;paramDF.ForwardTraj3D{1,i}(:, paramDF.DM2d3dSta(:, 1))];
-    incmplTrajBwd3d = [incmplTrajBwd3d;paramDF.BackwardTraj3D{1,i}(:, paramDF.DM2d3dEnd(:, 1))];
-    gndIdxFwd = [gndIdxFwd, find(paramDF.ForwardTraj3D{1,i}(3, paramDF.DM2d3dSta(:, 1))<paramDF.gndHight)];
-    gndIdxBwd = [gndIdxBwd, find(paramDF.BackwardTraj3D{1,i}(3, paramDF.DM2d3dEnd(:, 1))<paramDF.gndHight)];
-end
-lostIdxFwd = paramDF.ForwardTraj3Dproj{1,i}(1, paramDF.DM2d3dSta(:, 1)); 
-lostIdxFwd = find(lostIdxFwd==1); lostIdxFwd = unique([lostIdxFwd, gndIdxFwd]);
-lostIdxBwd = paramDF.BackwardTraj3Dproj{1,i}(1, paramDF.DM2d3dEnd(:, 1)); 
-lostIdxBwd = find(lostIdxBwd==1); lostIdxBwd = unique([lostIdxBwd, gndIdxBwd]);
-incmplTrajFwd2d(:, lostIdxFwd) = []; incmplTrajBwd2d(:, lostIdxBwd) = [];
-incmplTrajFwd3d(:, lostIdxFwd) = []; incmplTrajBwd3d(:, lostIdxBwd) = [];
-if showFig
-imgK = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+paramDF.incmplTrajLnth).name];
-showFeatureMatchesVertical(imread(imgSta), imread(imgK),...
-    incmplTrajFwd2d(1:2,:)', incmplTrajFwd2d(end-1:end,:)');
-
-imgK = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-paramDF.incmplTrajLnth).name];
-showFeatureMatchesVertical(imread(imgEnd), imread(imgK),...
-    incmplTrajBwd2d(1:2,:)', incmplTrajBwd2d(end-1:end,:)');
-end
-end
-
 % Consturcture Incomplete Trajectories
 incmplTrajFwd2d = []; incmplTrajBwd2d = []; gndIdxFwd = [];
 incmplTrajFwd3d = []; incmplTrajBwd3d = []; gndIdxBwd = [];
@@ -226,7 +187,7 @@ for i = 1:length(paramDF.ForwardTraj3Dproj)
                                        find(paramDF.BackwardTraj3D{1,i}(3, paramDF.DM2d3dSta(:, 1))~=0) )];
 end
 lostIdxFwd = paramDF.ForwardTraj3Dproj{1,5}(1, paramDF.DM2d3dSta(:, 1)); 
-lostIdxFwd = find(lostIdxFwd==1); lostIdxFwd = unique([lostIdxFwd, gndIdxFwd]);
+lostIdxFwd = find(lostIdxFwd==1); lostIdxFwd = setdiff(lostIdxFwd, gndIdxFwd);
 lostIdxBwd = paramDF.BackwardTraj3Dproj{1,end-4}(1, paramDF.DM2d3dEnd(:, 1)); 
 lostIdxBwd = find(lostIdxBwd==1); lostIdxBwd = unique([lostIdxBwd, gndIdxBwd]);
 % lostIdxFwd = unique(gndIdxFwd); lostIdxBwd = unique(gndIdxBwd);
