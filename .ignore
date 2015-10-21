@@ -22,8 +22,12 @@
 *.xz
 *.lzma
 *.cab
+
+# ignore data files
 *.mat
 *.txt
+*.flo
+*.pcd
 
 #package management formats
 *.dmg
