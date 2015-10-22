@@ -3,13 +3,13 @@
 %% Option 2： backward optical flow tracking
 function [paramDF] = SequentialOpticalFlowTrking(paramDF, opt, nFrm)
 if nargin <3
-    nFrm = 6;
+    nFrm = paramDF.nFrm;
 else
     nFrm = nFrm + 1;
 end
 
 if nargin <2 | opt== 1
-    opt = 1; 
+    opt = 1;
     stepsDirection = 1;
     endSeq = paramDF.endSeq;
     staSeq = paramDF.staSeq;
@@ -32,7 +32,7 @@ end
 %% Starting Frame to track
 % load velodyne points
 fid  = fopen(sprintf('%s/tracking_module/training/velodyne/%04s/%06d.bin',...
-     paramDF.base_dir, paramDF.sequence(1:end-1), staSeq-1),'rb');
+    paramDF.base_dir, paramDF.sequence(1:end-1), staSeq-1),'rb');
 velo = fread(fid,[4 inf],'single')';
 fclose(fid);
 
@@ -57,11 +57,11 @@ traj3D{length(traj3D)+1} = pts3D;
 leftImgRef = imread([paramDF.leftFileDir,paramDF.imgsLeft(paramDF.staSeq).name]);
 % rightImgRef = rgb2gray(imread([rightFileDir,imgsRight(staSeq).name]));
 
-optiFlowSeq = []; showFig = 1; 
+optiFlowSeq = []; showFig = 1;
 for methodOpt = 1
     lostIdx = [];
     for idxframe = staSeq:stepsDirection:endSeq-stepsDirection
-
+        
         imgName1 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe).name];
         imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
         
@@ -86,8 +86,8 @@ for methodOpt = 1
             flo = readFlowFile(floName);
             vx = flo(:,:,1); vy = flo(:,:,2);
             toc
-%             optiFlowSeq{steps*(idxframe+1-staSeq), 1} = vx;
-%             optiFlowSeq{steps*(idxframe+1-staSeq), 2} = vy;
+            %             optiFlowSeq{steps*(idxframe+1-staSeq), 1} = vx;
+            %             optiFlowSeq{steps*(idxframe+1-staSeq), 2} = vy;
         end
         %% Project 3D to 2D
         fid  = fopen(sprintf('%s/tracking_module/training/velodyne/%04s/%06d.bin',...
@@ -150,11 +150,84 @@ for methodOpt = 1
         if showFig
             figure(1), imshow(im1);hold on;
             plot(proj3D(1,:), proj3D(2,:),'.r'); % original projected points
-                    plot(trkFeat(:,1), trkFeat(:,2),'.g'); % with optical flow
+            plot(trkFeat(:,1), trkFeat(:,2),'.g'); % with optical flow
             
             figure(2), imshow(im2); hold on;
             plot(trkFeat(:,1),trkFeat(:,2), '.','color',[0, 1, 0]);
             %             plot(proj3Dtrk(1,:),proj3Dtrk(2,:), '.b');
+        end
+        
+        
+        
+        %% Backward Validation
+        if stepsDirection == -1 | 1
+            lostIdxBkw = [];
+            floName = [paramDF.sequence(1:end-1),'_',imgName2(end-9:end-4),'_',imgName1(end-9:end-4),'.flo'];
+            %         im1 = im2single(imread(imgName2));
+            %         im2 = im2single(imread(imgName1));
+            deepFlowSet = [floName,' -match -kitti'];% -sintel , -middlebury
+            command = [paramDF.deepMatchingExe,imgName2,' ',imgName1, ' | ', ...
+                paramDF.deepFlowExe, imgName2,' ', imgName1,' ',deepFlowSet];
+            if exist(floName)
+                flo = readFlowFile(floName);
+                vx = flo(:,:,1); vy = flo(:,:,2);
+            else
+                tic;
+                [status,cmdout] = system(command);
+                flo = readFlowFile(floName);
+                vx = flo(:,:,1); vy = flo(:,:,2);
+                toc
+            end
+            
+            trkFeatBkw = trkFeat; trkOF = zeros(size(trkFeatBkw));
+            for i = 1:length(trkFeatBkw)
+                px = floor(trkFeatBkw(i,1));
+                py = floor(trkFeatBkw(i,2));
+                if(trkFeatBkw(i,1)==px && trkFeatBkw(i,2)==py)
+                    trkFeatBkw(i,1) = trkFeatBkw(i,1)+vx(py, px);
+                    trkFeatBkw(i,2) = trkFeatBkw(i,2)+vy(py, px);
+                    lostIdxBkw = [lostIdxBkw; i];
+                else
+                    if(px<1 || px>size(im2,2)-1 ||py<1 || py>size(im2,1)-1)
+                        trkFeatBkw(i,:) = [1, 1];
+                        continue;
+                    end
+                    Neigh4 = [px, py; px+1, py; px, py+1; px+1, py+1]; % 4 neighbourhood
+                    
+                    for j = 1:4
+                        Neigh4vx(j) = vx(Neigh4(j,2), Neigh4(j,1));
+                        Neigh4vy(j) = vy(Neigh4(j,2), Neigh4(j,1));
+                    end
+                    weight4 = repmat(trkFeatBkw(i,:),[4, 1]) - Neigh4;
+                    weight4 = weight4.*weight4;
+                    weight4 = sum(weight4'); weight4 = 1./weight4;
+                    deltaX = weight4*Neigh4vx'/sum(weight4);
+                    deltaY = weight4*Neigh4vy'/sum(weight4);
+                    trkFeatBkw(i,1) = trkFeatBkw(i,1) + deltaX;
+                    trkFeatBkw(i,2) = trkFeatBkw(i,2) + deltaY;
+                    trkOF(i,1)  = deltaX;
+                    trkOF(i,2)  = deltaY;
+                end
+                if(trkFeatBkw(i,1)<1 || trkFeatBkw(i,1)>size(im2,2)-1 ||...
+                        trkFeatBkw(i,2)<1 || trkFeatBkw(i,2)>size(im2,1)-1)
+                    trkFeatBkw(i,:) = [1, 1];
+                    lostIdxBkw  = [lostIdxBkw; i];
+                    continue;
+                end
+            end
+            BwdFwdErr = trkFeatBkw' - proj3D;
+            BwdFwdErr = sqrt(sum(BwdFwdErr.*BwdFwdErr));
+            lostIdxBkw  = unique([lostIdxBkw' , find(BwdFwdErr>1)]);
+            %             if showFig
+            %                 figure(1), imshow(im1);hold on;
+            %                 plot(proj3D(1,:), proj3D(2,:),'.r'); % original projected points
+            %                 plot(trkFeatBkw(:,1), trkFeatBkw(:,2),'.g'); % with optical flow
+            %
+            %                 figure(2), imshow(im1); hold on;
+            %                 plot(trkFeatBkw(:,1),trkFeatBkw(:,2), '.','color',[0, 1, 0]);
+            %                 %             plot(proj3Dtrk(1,:),proj3Dtrk(2,:), '.b');
+            %             end
+            lostIdx = unique([lostIdxBkw'; lostIdx]);
         end
         %% Find tracked points from 2D projection of next 3d cloud
         [knnIdx, knnDist] = knnsearch(proj3Dtrk', trkFeat);
@@ -181,14 +254,14 @@ for methodOpt = 1
         if (idxframe == endSeq -1)
             optiFlowSeqName = ['OF_',paramDF.leftImgDir(end-8:end-1),'_',paramDF.sequence(1:end-1),'_',...
                 num2str(staSeq),'_',num2str(endSeq),'_DF.mat'];
-%             save(optiFlowSeqName, 'optiFlowSeq');
-            optiFlowSeqName = '_';            
-%             optiFlowSeq = [];
+            %             save(optiFlowSeqName, 'optiFlowSeq');
+            optiFlowSeqName = '_';
+            %             optiFlowSeq = [];
         end
     end
-%     save(paramDF.traj3DName, 'traj3D');
-%     save(paramDF.traj3DprojName, 'traj3Dproj');
-%     save(paramDF.lostTraj3DName, 'lostIdx');
+    %     save(paramDF.traj3DName, 'traj3D');
+    %     save(paramDF.traj3DprojName, 'traj3Dproj');
+    %     save(paramDF.lostTraj3DName, 'lostIdx');
     idxframe = 1;
     if(opt==1)
         ForwardTraj3D = traj3D; paramDF.ForwardTraj3D = ForwardTraj3D;
@@ -201,7 +274,7 @@ for methodOpt = 1
     elseif(opt==3)
         BackwardTraj3D = traj3D; paramDF.nFrmBwdTraj3D = BackwardTraj3D;
         BackwardTraj3Dproj = traj3Dproj; paramDF.nFrmBwdTraj3Dproj = BackwardTraj3Dproj;
-        BackwardLostIdx = lostIdx; paramDF.nFrmBwdLostIdx = BackwardLostIdx;      
+        BackwardLostIdx = lostIdx; paramDF.nFrmBwdLostIdx = BackwardLostIdx;
     elseif(opt==4)
         ForwardTraj3D = traj3D; paramDF.nFrmFwdTraj3D = ForwardTraj3D;
         ForwardTraj3Dproj = traj3Dproj; paramDF.nFrmFwdTraj3Dproj = ForwardTraj3Dproj;

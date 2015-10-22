@@ -40,6 +40,7 @@ paramDF.sequence = sequence;
 paramDF.staSeq = staSeq;
 paramDF.endSeq   = endSeq;
 paramDF.midSeq   = midSeq;
+paramDF.nFrm     = (endSeq-staSeq)-5;
 paramDF.distThd  = distThd;
 paramDF.prjErrThd= 2;
 paramDF.gndHight = -1.3; 
