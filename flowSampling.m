@@ -43,7 +43,7 @@ for i = 1:size(trajDiff, 2)
     normDiff = [normDiff, sum(sqrt(sum(tmpXYZ.*tmpXYZ,2)))/(size(trajDiff,1)/dim3d - lenTrajColumn(i))];
 %     normDiff = [normDiff, mean(sqrt(sum(tmpXYZ.*tmpXYZ,2)))];
 end
-inlierNb = floor(max(2*nFeature, 0.5*lenTraj3d));
+inlierNb = min([floor(max(2*nFeature, 0.5*lenTraj3d)), 800, size(traj3d,2)]);
 sortedNormDiff = sort(normDiff); bigDiffIdx = find(normDiff>sortedNormDiff(inlierNb));
 inlierIdx = find(normDiff<sortedNormDiff(inlierNb));
 traj3d = traj3d(:, inlierIdx);

@@ -56,7 +56,7 @@ paramDF.P_velo_to_img = P_velo_to_img;
 %%
 %%
 %% Deep Matching for keyframe matching
-if 0
+if 1
     % run deep matching algorithm
     showFig = 0;
     imgSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq).name];
@@ -158,7 +158,7 @@ end
 cmplTrajFwd3d(:, unique([paramDF.ForwardLostIdx; gndIdxFwd'])) = [];
 cmplTrajFwd2d(:, unique([paramDF.ForwardLostIdx; gndIdxFwd'])) = [];
 
-floNameSta = [paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq-1, paramDF.staSeq)];
+floNameSta = ['./flo/',paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq-1, paramDF.staSeq)];
 floSta = readFlowFile(floNameSta); paramDF.cmplTrajNb = 100;
 [inlierIdx, sampleIdxCmpl] = flowSampling(cmplTrajFwd3d, cmplTrajFwd2d, floSta, paramDF.cmplTrajNb);
 if showFig
@@ -172,111 +172,17 @@ paramDF.cmplTrajFwd3d = cmplTrajFwd3d(:,sampleIdxCmpl); paramDF.cmplTrajFwd2d = 
 %%
 %%
 %%
-%% Incomplete Trajectories Construction
-% Consturcture Incomplete Trajectories Indexing
-incmplTrajFwd2d = []; incmplTrajBwd2d = []; gndIdxFwd = [];
-incmplTrajFwd3d = []; incmplTrajBwd3d = []; gndIdxBwd = [];
-IncmplIdxFwd = intersect( find(paramDF.ForwardTraj3Dproj{1,6}(1,:)==1),...
-    find(paramDF.ForwardTraj3Dproj{1,5}(1,:)~=1));
-IncmplIdxFwd = intersect( IncmplIdxFwd, find(paramDF.nFrmBwdTraj3Dproj{1,end}(1,:)~=1));
-gndIdxFwd  = intersect(find(paramDF.ForwardTraj3D{1,5}(3,:)>paramDF.gndHight),...
-    find(paramDF.nFrmBwdTraj3D{1,end}(3,:)>paramDF.gndHight));
-IncmplIdxFwd = intersect(IncmplIdxFwd, gndIdxFwd);
-
-%------------------------------------------
-IncmplIdxBwd = intersect( find(paramDF.BackwardTraj3Dproj{1,6}(1,:)==1),...
-    find(paramDF.BackwardTraj3Dproj{1,5}(1,:)~=1));
-IncmplIdxBwd = intersect( IncmplIdxBwd, find(paramDF.nFrmFwdTraj3Dproj{1,end}(1,:)~=1));
-gndIdxBwd  = intersect(find(paramDF.BackwardTraj3D{1,5}(3,:)>paramDF.gndHight),...
-    find(paramDF.nFrmFwdTraj3D{1,end}(3,:)>paramDF.gndHight));
-IncmplIdxBwd = intersect(IncmplIdxBwd, gndIdxBwd);
-
-% get trajectories
-incmplTrajFwd2d = zeros( size(paramDF.cmplTrajFwd2d,1), length(IncmplIdxFwd));
-incmplTrajFwd3d = zeros( size(paramDF.cmplTrajFwd3d,1), length(IncmplIdxFwd));
-incmplTrajBwd2d = zeros( size(paramDF.cmplTrajFwd2d,1), length(IncmplIdxBwd));
-incmplTrajBwd3d = zeros( size(paramDF.cmplTrajFwd3d,1), length(IncmplIdxBwd));
-lenExt = size(paramDF.cmplTrajFwd2d,1)/2-5;
-for i = 1:5
-    incmplTrajFwd2d(2*lenExt+2*i-1:2*lenExt+2*i,:) = paramDF.ForwardTraj3Dproj{1,i}(:,IncmplIdxFwd);
-    incmplTrajFwd3d(3*lenExt+3*i-2:3*lenExt+3*i,:) = paramDF.ForwardTraj3D{1,i}(:,IncmplIdxFwd);
-    incmplTrajBwd2d(2*i-1:2*i,:) = paramDF.BackwardTraj3Dproj{1,6-i}(:,IncmplIdxBwd);
-    incmplTrajBwd3d(3*i-2:3*i,:) = paramDF.BackwardTraj3D{1,6-i}(:,IncmplIdxBwd);
-end
-for i = 1:lenExt
-    incmplTrajFwd2d(2*i-1:2*i,:) = paramDF.nFrmBwdTraj3Dproj{lenExt-i+1}(:,IncmplIdxFwd);
-    incmplTrajFwd3d(3*i-2:3*i,:) = paramDF.nFrmBwdTraj3D{lenExt-i+1}(:,IncmplIdxFwd);
-    incmplTrajBwd2d(2*5+2*i-1:2*5+2*i,:) = paramDF.nFrmFwdTraj3Dproj{1,i}(:,IncmplIdxBwd);
-    incmplTrajBwd3d(3*5+3*i-2:3*5+3*i,:) = paramDF.nFrmFwdTraj3D{1,i}(:,IncmplIdxBwd);
-end
-
-if showFig
-    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-10).name];
-    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+5).name];
-    showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
-        incmplTrajFwd2d(1:2,:)', incmplTrajFwd2d(end-1:end,:)');
-    
-    incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-5).name];
-    incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+10).name];
-    showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
-        incmplTrajBwd2d(1:2,:)', incmplTrajBwd2d(end-1:end,:)');
-end
-%%
-%%
-%%
-%% Trajectories Sampling
-floNameSta = [paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq-lenExt, paramDF.staSeq-lenExt+1)];
-floSta = readFlowFile(floNameSta); paramDF.incmplTrajNbSta = 60;
-[inlierIdx, sampleIdx, ourlierIdx] = flowSampling(incmplTrajFwd3d, incmplTrajFwd2d, floSta, paramDF.incmplTrajNbSta);
-paramDF.incmplTrajFwd2d = ones([size(paramDF.cmplTrajFwd2d,1), length(sampleIdx)]);
-paramDF.incmplTrajFwd3d = ones([size(paramDF.cmplTrajFwd3d,1), length(sampleIdx)]);
-paramDF.incmplTrajFwd2d(1:size(incmplTrajFwd2d,1), :) = incmplTrajFwd2d(:, sampleIdx);
-paramDF.incmplTrajFwd3d(1:size(incmplTrajFwd3d,1), :) = incmplTrajFwd3d(:, sampleIdx);
-if showFig
-    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-10).name];
-    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+5).name];
-    showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
-        incmplTrajFwd2d(1:2,:)', incmplTrajFwd2d(end-1:end,:)');title('Incomplete Forward No Sampling');
-    showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
-        incmplTrajFwd2d(1:2,inlierIdx)', incmplTrajFwd2d(end-1:end,inlierIdx)');title('Incomplete Forward InlierIdx');
-    showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
-        incmplTrajFwd2d(1:2,sampleIdx)', incmplTrajFwd2d(end-1:end,sampleIdx)');title('Incomplete Forward SmpIdx');
-    showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
-        incmplTrajFwd2d(1:2,ourlierIdx)', incmplTrajFwd2d(end-1:end,ourlierIdx)');title('Incomplete Forward OutlierIdx');
-end
-paramDF.incmplTrajFwd2d = incmplTrajFwd2d(:, sampleIdx);
-paramDF.incmplTrajFwd3d = incmplTrajFwd3d(:, sampleIdx);
-
-floNameEnd = [paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo', paramDF.endSeq-5, paramDF.endSeq-4)];
-floEnd = readFlowFile(floNameEnd); paramDF.incmplTrajNbEnd = 60;
-[inlierIdx, sampleIdx, outlierIdx] = flowSampling(incmplTrajBwd3d, incmplTrajBwd2d, floEnd, paramDF.incmplTrajNbEnd);
-if showFig
-    incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-5).name];
-    incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+10).name];
-    showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
-        incmplTrajBwd2d(1:2,:)', incmplTrajBwd2d(end-1:end,:)'); title('Incomplete Backward No Sampling');
-    showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
-        incmplTrajBwd2d(1:2,inlierIdx)', incmplTrajBwd2d(end-1:end,inlierIdx)'); title('Incomplete Backward InlierIdx');
-    showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
-        incmplTrajBwd2d(1:2,sampleIdx)', incmplTrajBwd2d(end-1:end,sampleIdx)'); title('Incomplete Backward SmpIdx');
-    showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
-        incmplTrajBwd2d(1:2,ourlierIdx)', incmplTrajBwd2d(end-1:end,ourlierIdx)'); title('Incomplete Backward OutlierIdx');
-end
-paramDF.incmplTrajBwd2d = incmplTrajBwd2d(:, sampleIdx);
-paramDF.incmplTrajBwd3d = incmplTrajBwd3d(:, sampleIdx);
+paramDF = incmplTrajSmpl(paramDF);
 
 %% View Trajectories
 figure, imshow(imgSta), hold on;
 plot(paramDF.cmplTrajFwd2d(1,:),   paramDF.cmplTrajFwd2d(2,:), 'sr');
 plot(paramDF.incmplTrajFwd2d(1,:), paramDF.incmplTrajFwd2d(2,:), 'sg');
-
-figure, imshow(imgEnd), hold on;
-plot(paramDF.cmplTrajFwd2d(end-1,:),   paramDF.cmplTrajFwd2d(end,:), 'sr');
-plot(paramDF.incmplTrajBwd2d(end-1,:), paramDF.incmplTrajBwd2d(end,:), 'sg');
+plot(paramDF.incmplTrajBwd2d(end-1,:), paramDF.incmplTrajBwd2d(end,:), 'sb');
 
 paramDF.traj3dAll = [paramDF.cmplTrajFwd3d, paramDF.incmplTrajFwd3d, paramDF.incmplTrajBwd3d];
 paramDF.traj2dAll = [paramDF.cmplTrajFwd2d, paramDF.incmplTrajFwd2d, paramDF.incmplTrajBwd2d];
-% 
+
 % incmplTraj3dFwdPcd = []; incmplTraj3dBwdPcd = [];
 % for i = 1:paramDF.incmplTrajLnth
 %     incmplTraj3dFwdPcd = [incmplTraj3dFwdPcd, paramDF.incmplTrajFwd3d(i*3-2:i*3, :)];
@@ -312,10 +218,11 @@ savepcd(traj3DValidName, traj3dAllSeq);
 %%
 %% Motion Segmentation
 %% Sparce Spectural Clustering
-MSresultName3D = ['DF3dMS.mat'];
+MSresultName3D = ['msResult_', paramDF.sequence(1:4),'_',num2str(paramDF.staSeq),...
+    '_',num2str(paramDF.endSeq),'.pcd'];
 resultName = dir(MSresultName3D);
 subspaceDim = 6;
-nClass = 3;
+nClass = 7;
 if ~isempty(resultName)
     load(resultName.name);
     load(traj3DValidName);

@@ -4,8 +4,6 @@
 function [paramDF] = SequentialOpticalFlowTrking(paramDF, opt, nFrm)
 if nargin <3
     nFrm = paramDF.nFrm;
-else
-    nFrm = nFrm + 1;
 end
 
 if nargin <2 | opt== 1
@@ -22,11 +20,11 @@ if opt==2
 elseif opt==3
     stepsDirection = -1;
     staSeq = paramDF.staSeq;
-    endSeq = paramDF.staSeq-nFrm;
+    endSeq = paramDF.staSeq-nFrm+stepsDirection;
 elseif opt==4
     stepsDirection = 1;
     staSeq = paramDF.endSeq;
-    endSeq = paramDF.endSeq+nFrm;
+    endSeq = paramDF.endSeq+nFrm+stepsDirection;
 end
 
 %% Starting Frame to track
@@ -65,7 +63,7 @@ for methodOpt = 1
         imgName1 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe).name];
         imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
         
-        floName = [paramDF.sequence(1:end-1),'_',imgName1(end-9:end-4),'_',imgName2(end-9:end-4),'.flo'];
+        floName = ['./flo/', paramDF.sequence(1:end-1),'_',imgName1(end-9:end-4),'_',imgName2(end-9:end-4),'.flo'];
         im1 = im2single(imread(imgName1));
         im2 = im2single(imread(imgName2));
         deepFlowSet = [floName,' -match -kitti'];% -sintel , -middlebury
@@ -162,7 +160,7 @@ for methodOpt = 1
         %% Backward Validation
         if stepsDirection == -1 | 1
             lostIdxBkw = [];
-            floName = [paramDF.sequence(1:end-1),'_',imgName2(end-9:end-4),'_',imgName1(end-9:end-4),'.flo'];
+            floName = ['./flo/', paramDF.sequence(1:end-1),'_',imgName2(end-9:end-4),'_',imgName1(end-9:end-4),'.flo'];
             %         im1 = im2single(imread(imgName2));
             %         im2 = im2single(imread(imgName1));
             deepFlowSet = [floName,' -match -kitti'];% -sintel , -middlebury
