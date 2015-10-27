@@ -102,7 +102,7 @@ end
 %%
 %% Trajectories Sampling
 lenExt = trajlen -5;
-floNameSta = ['./flo/', paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq-lenExt, paramDF.staSeq-lenExt+1)];
+floNameSta = ['./flo/', paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq+5, paramDF.staSeq+6)];
 floSta = readFlowFile(floNameSta); paramDF.incmplTrajNbSta = 60;
 [inlierIdx, sampleIdx, ourlierIdx] = flowSampling(incmplTrajFwd3d, incmplTrajFwd2d, floSta, paramDF.incmplTrajNbSta);
 paramDF.incmplTrajFwd2d = ones([size(paramDF.cmplTrajFwd2d,1), length(sampleIdx)]);
@@ -124,7 +124,7 @@ end
 paramDF.incmplTrajFwd2d = incmplTrajFwd2d(:, sampleIdx);
 paramDF.incmplTrajFwd3d = incmplTrajFwd3d(:, sampleIdx);
 
-floNameEnd = ['./flo/',paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo', paramDF.endSeq-5, paramDF.endSeq-4)];
+floNameEnd = ['./flo/',paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo', paramDF.endSeq+lenExt-1, paramDF.endSeq+lenExt)];
 floEnd = readFlowFile(floNameEnd); paramDF.incmplTrajNbEnd = 60;
 [inlierIdx, sampleIdx, outlierIdx] = flowSampling(incmplTrajBwd3d, incmplTrajBwd2d, floEnd, paramDF.incmplTrajNbEnd);
 if showFig

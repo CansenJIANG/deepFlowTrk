@@ -1,7 +1,7 @@
 %% function [idx] = flowSampling(OF, candidatePos, smpNb)
 function [inlierIdx, sampleIdx, bigDiffIdx] = flowSampling(traj3d, traj3dProj, flo, nFeature)
-dim3d = 3; zigma = 35;
-trajOF = interpolateOF(traj3dProj(1:2,:), flo)';
+dim3d = 3; zigma = 65;
+trajOF = interpolateOF(traj3dProj(end-1:end,:), flo)';
 
 lenTrajColumn = [];
 for i = 1:size(traj3d, 2)

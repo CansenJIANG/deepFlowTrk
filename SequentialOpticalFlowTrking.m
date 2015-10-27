@@ -57,7 +57,7 @@ leftImgRef = imread([paramDF.leftFileDir,paramDF.imgsLeft(paramDF.staSeq).name])
 
 optiFlowSeq = []; showFig = 1;
 for methodOpt = 1
-    lostIdx = [];
+    lostIdx = []; outFOV = [];
     for idxframe = staSeq:stepsDirection:endSeq-stepsDirection
         
         imgName1 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe).name];
