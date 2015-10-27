@@ -36,7 +36,7 @@ paramDF.deepFlowExe     = '/home/jiang/CvTools/DeepFlow_release2.0/deepflow2 ';
 % sequence = '0019/'; startSeq = 565; endSeq = 577; distThd = 100;
 %  sequence = '0010/'; staSeq = 75; endSeq = 84; distThd = 100;
 % sequence = '0011/'; staSeq =160; endSeq = 170; distThd = 100;
-sequence = '0019/'; staSeq =942; endSeq = 952; distThd = 100;
+sequence = '0019/'; staSeq =948; endSeq = 955; distThd = 100;
 distThd = 120; midSeq = staSeq+floor(0.5*(endSeq-staSeq));
 paramDF.saveTrkName = ['DFT_', sequence(1:end-1),'_', num2str(staSeq),'_', num2str(endSeq),'.mat'];
 paramDF.sequence = sequence;
@@ -55,3 +55,9 @@ paramDF.leftFileDir = [paramDF.leftImgDir, sequence];
 paramDF.imgsLeft    = dir([paramDF.leftFileDir,'*.png']);
 paramDF.rightFileDir= [paramDF.rightImgDir, sequence]; 
 paramDF.imgsRight   = dir([paramDF.rightFileDir,'*.png']);
+
+
+%% Flow interpolation
+paramDF.rad3d = 0.1; % flow knn radius in 3d
+paramDF.rad2d = 3; % flow knn radius in 2d
+paramDF.wSz   = 7; % flow visual memory size

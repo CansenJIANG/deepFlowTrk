@@ -51,23 +51,30 @@ proj3D(1,proj3D(1, :)<1) = 1; proj3D(2,proj3D(2, :)<1) = 1;
 traj3Dproj{length(traj3Dproj)+1} = proj3D;
 traj3D{length(traj3D)+1} = pts3D;
 
+paramDF = constructVisualMemory(paramDF,proj3D, pts3D);
 %% Compute Dense Optical Flow
 leftImgRef = imread([paramDF.leftFileDir,paramDF.imgsLeft(paramDF.staSeq).name]);
 % rightImgRef = rgb2gray(imread([rightFileDir,imgsRight(staSeq).name]));
 
 optiFlowSeq = []; showFig = 1;
-for methodOpt = 1
-    lostIdx = []; outFOV = [];
-    for idxframe = staSeq:stepsDirection:endSeq-stepsDirection
-        
-        imgName1 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe).name];
-        imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
-        
-        floName = ['./flo/', paramDF.sequence(1:end-1),'_',imgName1(end-9:end-4),'_',imgName2(end-9:end-4),'.flo'];
+for methodOpt = 1:3
+    stepScl = methodOpt;
+    lostIdx = []; outFoV = [];
+    for idxframe = staSeq:stepScl*stepsDirection:endSeq-stepsDirection
+        if exist('motFuseImgName') && 0
+            imgName1 = [pwd,'/', motFuseImgName];
+            imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
+            floName = [sprintf('./flo/motFuse_%06d.flo',idxframe)];
+        else
+            imgName1 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe).name];
+            imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
+            floName = ['./flo/', paramDF.sequence(1:end-1),'_',imgName1(end-9:end-4),'_',imgName2(end-9:end-4),'.flo'];
+        end
+
         im1 = im2single(imread(imgName1));
         im2 = im2single(imread(imgName2));
         deepFlowSet = [floName,' -match -kitti'];% -sintel , -middlebury
-        command = [paramDF.deepMatchingExe,imgName1,' ',imgName2, ' | ', ...
+        command = [paramDF.deepMatchingExe, imgName1,' ',imgName2, ' | ', ...
             paramDF.deepFlowExe, imgName1,' ', imgName2,' ',deepFlowSet];
         % tic;[status,cmdout] = system(command);toc;
         % flo = readFlowFile(floName);
@@ -114,11 +121,11 @@ for methodOpt = 1
             py = floor(trkFeat(i,2));
             if(trkFeat(i,1)==px && trkFeat(i,2)==py)
                 trkFeat(i,1) = trkFeat(i,1)+vx(py, px);
-                trkFeat(i,2) = trkFeat(i,2)+vy(py, px);
-                lostIdx = [lostIdx; i];
+                trkFeat(i,2) = trkFeat(i,2)+vy(py, px);            
             else
                 if(px<1 || px>size(im2,2)-1 ||py<1 || py>size(im2,1)-1)
                     trkFeat(i,:) = [1, 1];
+                    outFoV = [outFoV; i];
                     continue;
                 end
                 Neigh4 = [px, py; px+1, py; px, py+1; px+1, py+1]; % 4 neighbourhood
@@ -140,7 +147,8 @@ for methodOpt = 1
             if(trkFeat(i,1)<1 || trkFeat(i,1)>size(im2,2)-1 ||...
                     trkFeat(i,2)<1 || trkFeat(i,2)>size(im2,1)-1)
                 trkFeat(i,:) = [1, 1];
-                lostIdx = [lostIdx; i];
+%                 lostIdx = [lostIdx; i];
+                outFoV = [outFoV; i];
                 continue;
             end
         end
@@ -177,17 +185,17 @@ for methodOpt = 1
                 toc
             end
             
-            trkFeatBkw = trkFeat; trkOF = zeros(size(trkFeatBkw));
+            trkFeatBkw = trkFeat; trkOFBkw = zeros(size(trkFeatBkw));
             for i = 1:length(trkFeatBkw)
                 px = floor(trkFeatBkw(i,1));
                 py = floor(trkFeatBkw(i,2));
                 if(trkFeatBkw(i,1)==px && trkFeatBkw(i,2)==py)
                     trkFeatBkw(i,1) = trkFeatBkw(i,1)+vx(py, px);
                     trkFeatBkw(i,2) = trkFeatBkw(i,2)+vy(py, px);
-                    lostIdxBkw = [lostIdxBkw; i];
                 else
                     if(px<1 || px>size(im2,2)-1 ||py<1 || py>size(im2,1)-1)
                         trkFeatBkw(i,:) = [1, 1];
+                        outFoV = [outFoV; i];
                         continue;
                     end
                     Neigh4 = [px, py; px+1, py; px, py+1; px+1, py+1]; % 4 neighbourhood
@@ -203,32 +211,34 @@ for methodOpt = 1
                     deltaY = weight4*Neigh4vy'/sum(weight4);
                     trkFeatBkw(i,1) = trkFeatBkw(i,1) + deltaX;
                     trkFeatBkw(i,2) = trkFeatBkw(i,2) + deltaY;
-                    trkOF(i,1)  = deltaX;
-                    trkOF(i,2)  = deltaY;
+                    trkOFBkw(i,1)  = deltaX;
+                    trkOFBkw(i,2)  = deltaY;
                 end
                 if(trkFeatBkw(i,1)<1 || trkFeatBkw(i,1)>size(im2,2)-1 ||...
                         trkFeatBkw(i,2)<1 || trkFeatBkw(i,2)>size(im2,1)-1)
                     trkFeatBkw(i,:) = [1, 1];
-                    lostIdxBkw  = [lostIdxBkw; i];
+                    outFoV = [outFoV; i];
                     continue;
                 end
             end
             BwdFwdErr = trkFeatBkw' - proj3D;
             BwdFwdErr = sqrt(sum(BwdFwdErr.*BwdFwdErr));
-            lostIdxBkw  = unique([lostIdxBkw' , find(BwdFwdErr>1)]);
-            %             if showFig
-            %                 figure(1), imshow(im1);hold on;
-            %                 plot(proj3D(1,:), proj3D(2,:),'.r'); % original projected points
-            %                 plot(trkFeatBkw(:,1), trkFeatBkw(:,2),'.g'); % with optical flow
-            %
-            %                 figure(2), imshow(im1); hold on;
-            %                 plot(trkFeatBkw(:,1),trkFeatBkw(:,2), '.','color',[0, 1, 0]);
-            %                 %             plot(proj3Dtrk(1,:),proj3Dtrk(2,:), '.b');
-            %             end
-            lostIdx = unique([lostIdxBkw'; lostIdx]);
+            lostIdxBkw  = unique(find(BwdFwdErr>1));
+            lostIdx = setdiff(lostIdxBkw, outFoV);
+            if showFig
+                figure(1), imshow(im1);hold on; title('Occluded Flows')
+                plot(proj3D(1,lostIdx), proj3D(2,lostIdx),'sr');
+                plot(proj3D(1,outFoV), proj3D(2,outFoV),'sg');
+            end
+%             [lostMsk, lostMskImg] = buildOcclusionMask(im1, proj3D(:,lostIdx),2);
+%             [motFuseImg, motMskImg, retrkIdx, lostTrkIdx] = motionInterpolation(paramDF, trkOF, lostIdx, lostMskImg, im1, proj3D(:,lostIdx), im2);
+%             motFuseImgName = sprintf('motMskImg_%06d.png',idxframe);
+%             imwrite(motFuseImg, motFuseImgName);
         end
         %% Find tracked points from 2D projection of next 3d cloud
         [knnIdx, knnDist] = knnsearch(proj3Dtrk', trkFeat);
+%         lostIdx = unique([lostTrkIdx; outFoV]);
+        lostIdx = unique([lostIdx'; outFoV]);
         pts3Dcorr = pts3Dtrk(:, knnIdx); pts3Dcorr(:, lostIdx) = 0;
         traj3D{length(traj3D)+1} = pts3Dcorr;
         ptsProj3Dcorr = proj3Dtrk(:, knnIdx); ptsProj3Dcorr(:, lostIdx) = 1;
@@ -245,8 +255,9 @@ for methodOpt = 1
         lostIdx = unique(lostIdx);
         
         if showFig
-            figure(3), imshow(im2); hold on;
+            figure(300+stepScl*stepsDirection), imshow(im2); hold on;
             plot(proj3D(1,:),proj3D(2,:), '.','color',[0, 1, 0]);
+%             plot(proj3D(1,retrkIdx),proj3D(2,retrkIdx), 'sr');
         end
         
         if (idxframe == endSeq -1)
