@@ -87,13 +87,13 @@ end
 
 
 if showFig
-    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-trajlen + 6).name];
-    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+5).name];
+    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-trajlen + 7).name];
+    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+6).name];
     showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
         incmplTrajFwd2d(1:2,:)', incmplTrajFwd2d(end-1:end,:)');
      
     incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-5).name];
-    incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+trajlen -6).name];
+    incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+trajlen-6).name];
     showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
         incmplTrajBwd2d(1:2,:)', incmplTrajBwd2d(end-1:end,:)');
 end
@@ -101,8 +101,16 @@ end
 %%
 %%
 %% Trajectories Sampling
+rejectIdx = [];
+for i=1:size(incmplTrajFwd2d,2)
+    trajTmp = incmplTrajFwd2d(:,i);
+    if(sum(trajTmp==1))
+        rejectIdx = [rejectIdx, i];
+    end
+end
+incmplTrajFwd2d(:,rejectIdx) = []; incmplTrajFwd3d(:,rejectIdx) = [];
 lenExt = trajlen -5;
-floNameSta = ['./flo/', paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq+5, paramDF.staSeq+6)];
+floNameSta = ['./flo/', paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo',paramDF.staSeq-trajlen + 7, paramDF.staSeq-trajlen + 8)];
 floSta = readFlowFile(floNameSta); paramDF.incmplTrajNbSta = 60;
 [inlierIdx, sampleIdx, ourlierIdx] = flowSampling(incmplTrajFwd3d, incmplTrajFwd2d, floSta, paramDF.incmplTrajNbSta);
 paramDF.incmplTrajFwd2d = ones([size(paramDF.cmplTrajFwd2d,1), length(sampleIdx)]);
@@ -110,8 +118,8 @@ paramDF.incmplTrajFwd3d = ones([size(paramDF.cmplTrajFwd3d,1), length(sampleIdx)
 paramDF.incmplTrajFwd2d(1:size(incmplTrajFwd2d,1), :) = incmplTrajFwd2d(:, sampleIdx);
 paramDF.incmplTrajFwd3d(1:size(incmplTrajFwd3d,1), :) = incmplTrajFwd3d(:, sampleIdx);
 if showFig
-    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-10).name];
-    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+5).name];
+    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-trajlen + 7).name];
+    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+6).name];
     showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
         incmplTrajFwd2d(1:2,:)', incmplTrajFwd2d(end-1:end,:)');title('Incomplete Forward No Sampling');
     showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
@@ -128,7 +136,7 @@ floNameEnd = ['./flo/',paramDF.sequence(1:end-1),sprintf('_%06d_%06d.flo', param
 floEnd = readFlowFile(floNameEnd); paramDF.incmplTrajNbEnd = 60;
 [inlierIdx, sampleIdx, outlierIdx] = flowSampling(incmplTrajBwd3d, incmplTrajBwd2d, floEnd, paramDF.incmplTrajNbEnd);
 if showFig
-    incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-5).name];
+    incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-trajlen + 7).name];
     incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+lenExt).name];
     showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
         incmplTrajBwd2d(1:2,:)', incmplTrajBwd2d(end-1:end,:)'); title('Incomplete Backward No Sampling');

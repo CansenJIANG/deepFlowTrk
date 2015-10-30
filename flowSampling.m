@@ -1,7 +1,7 @@
 %% function [idx] = flowSampling(OF, candidatePos, smpNb)
 function [inlierIdx, sampleIdx, bigDiffIdx] = flowSampling(traj3d, traj3dProj, flo, nFeature)
-dim3d = 3; zigma = 65;
-trajOF = interpolateOF(traj3dProj(end-1:end,:), flo)';
+dim3d = 3; zigma = 10;
+trajOF = interpolateOF(traj3dProj(1:2,:), flo)';
 
 lenTrajColumn = [];
 for i = 1:size(traj3d, 2)
@@ -43,7 +43,7 @@ for i = 1:size(trajDiff, 2)
     normDiff = [normDiff, sum(sqrt(sum(tmpXYZ.*tmpXYZ,2)))/(size(trajDiff,1)/dim3d - lenTrajColumn(i))];
 %     normDiff = [normDiff, mean(sqrt(sum(tmpXYZ.*tmpXYZ,2)))];
 end
-inlierNb = min([floor(max(2*nFeature, 0.5*lenTraj3d)), 800, size(traj3d,2)]);
+inlierNb = floor(0.98*length(traj3d));
 sortedNormDiff = sort(normDiff); bigDiffIdx = find(normDiff>sortedNormDiff(inlierNb));
 inlierIdx = find(normDiff<sortedNormDiff(inlierNb));
 traj3d = traj3d(:, inlierIdx);
@@ -73,9 +73,9 @@ trajOF = sqrt(sum(trajOF.*trajOF));
 % traj3dProj = traj3dProj(:, inlierIdx);
 % trajDiff = trajDiff(:, inlierIdx);
 
-trajOF = exp(-trajOF/zigma);
+trajOF = exp(trajOF/zigma);
 meanOF = median(trajOF); stdvOF = std(trajOF);
-trajOF(trajOF>(meanOF+3*stdvOF)) = [];
+% trajOF(trajOF>(meanOF+3*stdvOF)) = [];
 
 
 trajOF = trajOF/sum(trajOF);

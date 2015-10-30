@@ -29,8 +29,8 @@ end
 
 %% Starting Frame to track
 % load velodyne points
-fid  = fopen(sprintf('%s/tracking_module/training/velodyne/%04s/%06d.bin',...
-    paramDF.base_dir, paramDF.sequence(1:end-1), staSeq-1),'rb');
+fid  = fopen(sprintf('%s/tracking_module/%s/velodyne/%04s/%06d.bin',...
+    paramDF.base_dir, paramDF.mode, paramDF.sequence(1:end-1), staSeq-1),'rb');
 velo = fread(fid,[4 inf],'single')';
 fclose(fid);
 
@@ -57,10 +57,10 @@ leftImgRef = imread([paramDF.leftFileDir,paramDF.imgsLeft(paramDF.staSeq).name])
 % rightImgRef = rgb2gray(imread([rightFileDir,imgsRight(staSeq).name]));
 
 optiFlowSeq = []; showFig = 1;
-for methodOpt = 1:3
-    stepScl = methodOpt;
+for stepScl = 1
     lostIdx = []; outFoV = [];
-    for idxframe = staSeq:stepScl*stepsDirection:endSeq-stepsDirection
+    stepsDirection = stepScl*stepsDirection;
+    for idxframe = staSeq:stepsDirection:endSeq-stepsDirection
         if exist('motFuseImgName') && 0
             imgName1 = [pwd,'/', motFuseImgName];
             imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
@@ -95,8 +95,8 @@ for methodOpt = 1:3
             %             optiFlowSeq{steps*(idxframe+1-staSeq), 2} = vy;
         end
         %% Project 3D to 2D
-        fid  = fopen(sprintf('%s/tracking_module/training/velodyne/%04s/%06d.bin',...
-            paramDF.base_dir, paramDF.sequence(1:end-1),idxframe-1+stepsDirection),'rb');
+        fid  = fopen(sprintf('%s/tracking_module/%s/velodyne/%04s/%06d.bin',...
+               paramDF.base_dir, paramDF.mode, paramDF.sequence(1:end-1),idxframe-1+stepsDirection),'rb');
         velo = fread(fid,[4 inf],'single')';
         fclose(fid);
         
@@ -223,13 +223,13 @@ for methodOpt = 1:3
             end
             BwdFwdErr = trkFeatBkw' - proj3D;
             BwdFwdErr = sqrt(sum(BwdFwdErr.*BwdFwdErr));
-            lostIdxBkw  = unique(find(BwdFwdErr>1));
-            lostIdx = setdiff(lostIdxBkw, outFoV);
-            if showFig
-                figure(1), imshow(im1);hold on; title('Occluded Flows')
-                plot(proj3D(1,lostIdx), proj3D(2,lostIdx),'sr');
-                plot(proj3D(1,outFoV), proj3D(2,outFoV),'sg');
-            end
+            lostIdxBkw  = unique(find(BwdFwdErr>2.0));
+            lostIdx = [lostIdxBkw'; outFoV];
+%             if showFig
+%                 figure(1), imshow(im1);hold on; title('Occluded Flows')
+%                 plot(proj3D(1,lostIdx), proj3D(2,lostIdx),'sr');
+%                 plot(proj3D(1,outFoV), proj3D(2,outFoV),'sg');
+%             end
 %             [lostMsk, lostMskImg] = buildOcclusionMask(im1, proj3D(:,lostIdx),2);
 %             [motFuseImg, motMskImg, retrkIdx, lostTrkIdx] = motionInterpolation(paramDF, trkOF, lostIdx, lostMskImg, im1, proj3D(:,lostIdx), im2);
 %             motFuseImgName = sprintf('motMskImg_%06d.png',idxframe);
@@ -238,10 +238,10 @@ for methodOpt = 1:3
         %% Find tracked points from 2D projection of next 3d cloud
         [knnIdx, knnDist] = knnsearch(proj3Dtrk', trkFeat);
 %         lostIdx = unique([lostTrkIdx; outFoV]);
-        lostIdx = unique([lostIdx'; outFoV]);
+        lostIdx = unique([lostIdx; outFoV]);
         pts3Dcorr = pts3Dtrk(:, knnIdx); pts3Dcorr(:, lostIdx) = 0;
         traj3D{length(traj3D)+1} = pts3Dcorr;
-        ptsProj3Dcorr = proj3Dtrk(:, knnIdx); ptsProj3Dcorr(:, lostIdx) = 1;
+        ptsProj3Dcorr = proj3Dtrk(:, knnIdx); ptsProj3Dcorr(:, lostIdx) = 2.0;
         traj3Dproj{length(traj3Dproj)+1} = ptsProj3Dcorr;
         trajOF{length(trajOF)+1} = trkOF;
         
@@ -255,7 +255,7 @@ for methodOpt = 1:3
         lostIdx = unique(lostIdx);
         
         if showFig
-            figure(300+stepScl*stepsDirection), imshow(im2); hold on;
+            figure(300+stepsDirection), imshow(im2); hold on;
             plot(proj3D(1,:),proj3D(2,:), '.','color',[0, 1, 0]);
 %             plot(proj3D(1,retrkIdx),proj3D(2,retrkIdx), 'sr');
         end
