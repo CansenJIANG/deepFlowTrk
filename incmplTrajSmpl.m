@@ -1,6 +1,7 @@
 %% Incomplete Trajectories Construction
 function paramDF = incmplTrajSmpl(paramDF)
-trajlen = length(paramDF.ForwardTraj3Dproj); showFig = 0;
+trajlen = paramDF.seqLen; showFig = 0;
+nFrm = paramDF.nFrm;
 trajAllFwd2d = [];trajAllFwd3d = [];
 for i= 1:length(paramDF.ForwardTraj3Dproj)
     trajAllFwd2d = [trajAllFwd2d; paramDF.ForwardTraj3Dproj{i}];
@@ -12,22 +13,45 @@ for i=1:length(paramDF.nFrmBwdTraj3Dproj)
     trajAllNfrmBwd3d = [trajAllNfrmBwd3d; paramDF.nFrmBwdTraj3D{i}];
 end
 
+
 % Consturcture Incomplete Trajectories Indexing
-incmplTrajFwd2d = []; incmplTrajFwd3d = []; 
-incmplIdxFwd = setdiff(find(paramDF.ForwardTraj3Dproj{1,5}(1,:)~=1),...
+incmplTrajFwd2d = []; incmplTrajFwd3d = [];
+% Get index of features at least observed 5 frames
+incmplIdxFwd = setdiff(find(paramDF.ForwardTraj3Dproj{1,nFrm}(1,:)~=1),...
                        find(paramDF.ForwardTraj3Dproj{1,end}(1,:)~=1));
-                     
-incmplIdxFwd = intersect( incmplIdxFwd, find(paramDF.nFrmBwdTraj3Dproj{1,end}(1,:)~=1));
-gndIdxFwd  = intersect(find(paramDF.ForwardTraj3D{1,5}(3,:)>paramDF.gndHight),...
-    find(paramDF.nFrmBwdTraj3D{1,end}(3,:)>paramDF.gndHight));
+
+% Get index of features at least observed 5 frames
+incmplIdxFwd = intersect( incmplIdxFwd, find(paramDF.nFrmBwdTraj3Dproj{1,paramDF.nExtnd+1}(1,:)~=1));
+gndIdxFwd  = intersect(find(paramDF.ForwardTraj3D{1,nFrm}(3,:)>paramDF.gndHight),...
+    find(paramDF.nFrmBwdTraj3D{1,paramDF.nExtnd+1}(3,:)>paramDF.gndHight));
 incmplIdxFwd = intersect(incmplIdxFwd, gndIdxFwd);
 
 trajAllFwd2d = trajAllFwd2d(:,incmplIdxFwd);
 trajAllFwd3d = trajAllFwd3d(:,incmplIdxFwd); 
 trajAllNfrmBwd2d = trajAllNfrmBwd2d(:,incmplIdxFwd); 
 trajAllNfrmBwd3d = trajAllNfrmBwd3d(:,incmplIdxFwd); 
+
+% remove lost tracking index
+outIdxFwdNfrmBwd = [];
+for i=1:size(trajAllFwd2d,2)
+    tmpTrajAllFwd2d = trajAllFwd2d(1:2*nFrm,i);
+    if(~isempty(find(tmpTrajAllFwd2d==1)))
+        outIdxFwdNfrmBwd = [outIdxFwdNfrmBwd, i];
+        continue;
+    end
+    tmpTrajAllNfrmBwd2d = trajAllNfrmBwd2d(1:2*(paramDF.nExtnd+1),i);
+    if(~isempty(find(tmpTrajAllNfrmBwd2d==1)))
+        outIdxFwdNfrmBwd = [outIdxFwdNfrmBwd, i];
+    end
+end
+trajAllFwd2d(:,outIdxFwdNfrmBwd) = [];
+trajAllFwd3d(:,outIdxFwdNfrmBwd) = []; 
+trajAllNfrmBwd2d(:,outIdxFwdNfrmBwd) = []; 
+trajAllNfrmBwd3d(:,outIdxFwdNfrmBwd) = []; 
+
+% save inlier incomplete trajectories
 idxFilled = [];
-for i = 6:size(trajAllFwd2d,1)/2
+for i = paramDF.nExtnd:paramDF.seqLen
     idxFill = find(trajAllFwd2d(2*i,:)==1);
     idxFill = setdiff(idxFill, idxFilled);
     incmplTrajFwd2dTmp = trajAllFwd2d(1:2*(i-1),idxFill);
@@ -56,20 +80,39 @@ for i=1:length(paramDF.nFrmFwdTraj3Dproj)
 end
 
 % Consturcture Incomplete Trajectories Indexing
-incmplIdxBwd = setdiff(find(paramDF.BackwardTraj3Dproj{1,5}(1,:)~=1),...
+incmplIdxBwd = setdiff(find(paramDF.BackwardTraj3Dproj{1,nFrm}(1,:)~=1),...
                        find(paramDF.BackwardTraj3Dproj{1,end}(1,:)~=1));
                      
-incmplIdxBwd = intersect( incmplIdxBwd, find(paramDF.nFrmFwdTraj3Dproj{1,end}(1,:)~=1));
-gndIdxBwd  = intersect(find(paramDF.BackwardTraj3D{1,5}(3,:)>paramDF.gndHight),...
-    find(paramDF.nFrmFwdTraj3D{1,end}(3,:)>paramDF.gndHight));
+incmplIdxBwd = intersect( incmplIdxBwd, find(paramDF.nFrmFwdTraj3Dproj{1,paramDF.nExtnd+1}(1,:)~=1));
+gndIdxBwd  = intersect(find(paramDF.BackwardTraj3D{1,nFrm}(3,:)>paramDF.gndHight),...
+    find(paramDF.nFrmFwdTraj3D{1,paramDF.nExtnd+1}(3,:)>paramDF.gndHight));
 incmplIdxBwd = intersect(incmplIdxBwd, gndIdxBwd);
 
 trajAllBwd2d = trajAllBwd2d(:,incmplIdxBwd);
 trajAllBwd3d = trajAllBwd3d(:,incmplIdxBwd); 
 trajAllNfrmFwd2d = trajAllNfrmFwd2d(:,incmplIdxBwd); 
 trajAllNfrmFwd3d = trajAllNfrmFwd3d(:,incmplIdxBwd); 
+
+% remove lost tracking index
+outIdxBwdNfrmFwd = [];
+for i=1:size(trajAllBwd2d,2)
+    tmpTrajAllBwd2d = trajAllBwd2d(1:2*nFrm,i);
+    if(~isempty(find(tmpTrajAllBwd2d==1)))
+        outIdxBwdNfrmFwd = [outIdxBwdNfrmFwd, i];
+        continue;
+    end
+    tmpTrajAllNfrmFwd2d = trajAllNfrmFwd2d(1:2*(paramDF.nExtnd+1),i);
+    if(~isempty(find(tmpTrajAllNfrmFwd2d==1)))
+        outIdxBwdNfrmFwd = [outIdxBwdNfrmFwd, i];
+    end
+end
+trajAllBwd2d(:,outIdxBwdNfrmFwd) = [];
+trajAllBwd3d(:,outIdxBwdNfrmFwd) = []; 
+trajAllNfrmFwd2d(:,outIdxBwdNfrmFwd) = []; 
+trajAllNfrmFwd3d(:,outIdxBwdNfrmFwd) = []; 
+
 idxFilled = [];
-for i = 6:size(trajAllBwd2d,1)/2
+for i = paramDF.nExtnd:paramDF.seqLen
     idxFill = find(trajAllBwd2d(2*i,:)==1);
     idxFill = setdiff(idxFill, idxFilled);
     incmplTrajBwd2dTmp = trajAllBwd2d(1:2*(i-1),idxFill);
@@ -87,13 +130,13 @@ end
 
 
 if showFig
-    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-trajlen + 7).name];
-    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+6).name];
+    incmplImgFwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq-paramDF.nExtnd+2).name];
+    incmplImgFwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.staSeq+nFrm).name];
     showFeatureMatchesVertical(imread(incmplImgFwdSta), imread(incmplImgFwdEnd),...
         incmplTrajFwd2d(1:2,:)', incmplTrajFwd2d(end-1:end,:)');
      
-    incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-5).name];
-    incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+trajlen-6).name];
+    incmplImgBwdSta = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq-nFrm).name];
+    incmplImgBwdEnd = [paramDF.leftFileDir, paramDF.imgsLeft(paramDF.endSeq+paramDF.nExtnd-1).name];
     showFeatureMatchesVertical(imread(incmplImgBwdSta), imread(incmplImgBwdEnd),...
         incmplTrajBwd2d(1:2,:)', incmplTrajBwd2d(end-1:end,:)');
 end

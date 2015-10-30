@@ -20,11 +20,11 @@ if opt==2
 elseif opt==3
     stepsDirection = -1;
     staSeq = paramDF.staSeq;
-    endSeq = paramDF.staSeq-nFrm+stepsDirection;
+    endSeq = paramDF.staSeq - paramDF.nExtnd+stepsDirection;
 elseif opt==4
     stepsDirection = 1;
     staSeq = paramDF.endSeq;
-    endSeq = paramDF.endSeq+nFrm+stepsDirection;
+    endSeq = paramDF.endSeq + paramDF.nExtnd+stepsDirection;
 end
 
 %% Starting Frame to track
@@ -223,7 +223,10 @@ for stepScl = 1
             end
             BwdFwdErr = trkFeatBkw' - proj3D;
             BwdFwdErr = sqrt(sum(BwdFwdErr.*BwdFwdErr));
-            lostIdxBkw  = unique(find(BwdFwdErr>2.0));
+            lostIdxBkw  = unique(find(BwdFwdErr>10.0));
+            % If bck tracking lost, either occluded, either lost tracking
+            % because of in-robust.
+            inRobustIdxBkw  = setdiff(find(BwdFwdErr>1.0), lostIdxBkw);
             lostIdx = [lostIdxBkw'; outFoV];
 %             if showFig
 %                 figure(1), imshow(im1);hold on; title('Occluded Flows')
@@ -241,7 +244,7 @@ for stepScl = 1
         lostIdx = unique([lostIdx; outFoV]);
         pts3Dcorr = pts3Dtrk(:, knnIdx); pts3Dcorr(:, lostIdx) = 0;
         traj3D{length(traj3D)+1} = pts3Dcorr;
-        ptsProj3Dcorr = proj3Dtrk(:, knnIdx); ptsProj3Dcorr(:, lostIdx) = 2.0;
+        ptsProj3Dcorr = proj3Dtrk(:, knnIdx); ptsProj3Dcorr(:, lostIdx) = 1.0;
         traj3Dproj{length(traj3Dproj)+1} = ptsProj3Dcorr;
         trajOF{length(trajOF)+1} = trkOF;
         

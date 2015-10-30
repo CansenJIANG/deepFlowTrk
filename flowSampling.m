@@ -1,7 +1,13 @@
 %% function [idx] = flowSampling(OF, candidatePos, smpNb)
 function [inlierIdx, sampleIdx, bigDiffIdx] = flowSampling(traj3d, traj3dProj, flo, nFeature)
-dim3d = 3; zigma = 10;
-trajOF = interpolateOF(traj3dProj(1:2,:), flo)';
+dim3d = 3; zigma = 2; wSz = 7;
+flo_x = flo(:,:,1); flo_y = flo(:,:,2);
+mdnOF = [median(flo_x(:)), median(flo_y(:))];
+flo_x = flo_x-mdnOF(1); flo_y = flo_y-mdnOF(2);
+flo_x = sqrt(flo_x.*flo_x); flo_x = ordfilt2(flo_x,15,ones(wSz,wSz)); 
+flo_y = sqrt(flo_y.*flo_y); flo_y = ordfilt2(flo_y,15,ones(wSz,wSz));
+flo_xy(:,:,1) = flo_x; flo_xy(:,:,2) = flo_y;
+trajOF = interpolateOF(traj3dProj(1:2,:), flo_xy)';
 
 lenTrajColumn = [];
 for i = 1:size(traj3d, 2)
@@ -62,9 +68,6 @@ end
 % showPointCloud(traj3dLeft');
 % savepcd('traj3dLeft.pcd', traj3dLeft);
 %% Trajectories downsampling
-
-mdnOF = [median(trajOF(1,:)), median(trajOF(2,:))];
-trajOF = trajOF - repmat(mdnOF', [1, size(trajOF,2)]);
 trajOF = sqrt(sum(trajOF.*trajOF));
 
 % inlierIdx = trajOF<=600;
@@ -72,10 +75,10 @@ trajOF = sqrt(sum(trajOF.*trajOF));
 % traj3d = traj3d(:, inlierIdx);
 % traj3dProj = traj3dProj(:, inlierIdx);
 % trajDiff = trajDiff(:, inlierIdx);
-
-trajOF = exp(trajOF/zigma);
 meanOF = median(trajOF); stdvOF = std(trajOF);
-% trajOF(trajOF>(meanOF+3*stdvOF)) = [];
+trajOF(trajOF>(meanOF+3*stdvOF)) = meanOF+3*stdvOF;
+trajOF = exp(trajOF/zigma);
+
 
 
 trajOF = trajOF/sum(trajOF);
