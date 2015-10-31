@@ -150,7 +150,6 @@ end
 % end
 
 %% Complete Trajectories Sampling
-
 cmplTrajFwd3d = []; cmplTrajFwd2d = []; gndIdxFwd = [];
 unTrkIdx = [];
 for i = 1:length(paramDF.ForwardTraj3D)
@@ -159,6 +158,7 @@ for i = 1:length(paramDF.ForwardTraj3D)
     gndIdxFwd = unique([gndIdxFwd, find(paramDF.ForwardTraj3D{1,i}(3, :)<paramDF.gndHight)]);
     unTrkIdx = unique([unTrkIdx, find(paramDF.ForwardTraj3Dproj{1,i}(1, :)==1)]);
 end
+paramDF.ForwardLostIdx = find(cmplTrajFwd2d(1,:)==1)';
 unTrkIdx = unique([gndIdxFwd, unTrkIdx]);
 cmplTrajFwd3d(:, unique([paramDF.ForwardLostIdx; unTrkIdx'])) = [];
 cmplTrajFwd2d(:, unique([paramDF.ForwardLostIdx; unTrkIdx'])) = [];

@@ -51,14 +51,12 @@ proj3D(1,proj3D(1, :)<1) = 1; proj3D(2,proj3D(2, :)<1) = 1;
 traj3Dproj{length(traj3Dproj)+1} = proj3D;
 traj3D{length(traj3D)+1} = pts3D;
 
-% paramDF = constructVisualMemory(paramDF,proj3D, pts3D);
-[proj3D, pts3D] = increaseNeighborhood(proj3D, pts3D, 3);
-proj3D(1,proj3D(1, :)<1) = 1; proj3D(2,proj3D(2, :)<1) = 1;
+paramDF = constructVisualMemory(paramDF,proj3D, pts3D);
 %% Compute Dense Optical Flow
 leftImgRef = imread([paramDF.leftFileDir,paramDF.imgsLeft(paramDF.staSeq).name]);
 % rightImgRef = rgb2gray(imread([rightFileDir,imgsRight(staSeq).name]));
 
-optiFlowSeq = []; showFig = 0;
+optiFlowSeq = []; showFig = 1;
 for stepScl = 1
     lostIdx = []; outFoV = [];
     stepsDirection = stepScl*stepsDirection;
@@ -96,9 +94,6 @@ for stepScl = 1
             %             optiFlowSeq{steps*(idxframe+1-staSeq), 1} = vx;
             %             optiFlowSeq{steps*(idxframe+1-staSeq), 2} = vy;
         end
-        
-%         leftImgRef = getFloMaskImg(flo, leftImgRef, im2uint8(im2));
-        
         %% Project 3D to 2D
         fid  = fopen(sprintf('%s/tracking_module/%s/velodyne/%04s/%06d.bin',...
                paramDF.base_dir, paramDF.mode, paramDF.sequence(1:end-1),idxframe-1+stepsDirection),'rb');
@@ -118,8 +113,7 @@ for stepScl = 1
         pts3Dtrk  = velo(ptList,1:3)'; velo_depth = velo_depth(ptList);
         proj3Dtrk  = velo_img(:,ptList);
         
-        [proj3Dtrk, pts3Dtrk] = increaseNeighborhood(proj3Dtrk, pts3Dtrk, 3);
-        proj3Dtrk(1,proj3Dtrk(1, :)<1) = 1; proj3Dtrk(2,proj3Dtrk(2, :)<1) = 1;
+        
         %% Compute OF for 2D projections on img1
         trkFeat = proj3D'; trkOF = zeros(size(trkFeat));
         for i = 1:length(trkFeat)
@@ -229,7 +223,7 @@ for stepScl = 1
             end
             BwdFwdErr = trkFeatBkw' - proj3D;
             BwdFwdErr = sqrt(sum(BwdFwdErr.*BwdFwdErr));
-            lostIdxBkw  = unique(find(BwdFwdErr>5.0));
+            lostIdxBkw  = unique(find(BwdFwdErr>10.0));
             % If bck tracking lost, either occluded, either lost tracking
             % because of in-robust.
             inRobustIdxBkw  = setdiff(find(BwdFwdErr>1.0), lostIdxBkw);
@@ -280,9 +274,6 @@ for stepScl = 1
     %     save(paramDF.traj3DName, 'traj3D');
     %     save(paramDF.traj3DprojName, 'traj3Dproj');
     %     save(paramDF.lostTraj3DName, 'lostIdx');
-    for i = 2:length(traj3D)
-        [traj3Dproj{1,i}, traj3D{1,i}, lostIdx] = decreaseNeighborhood(traj3Dproj{1, i}, traj3D{1, i}, 1);
-    end
     idxframe = 1;
     if(opt==1)
         ForwardTraj3D = traj3D; paramDF.ForwardTraj3D = ForwardTraj3D;
