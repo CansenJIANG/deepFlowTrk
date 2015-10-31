@@ -1,6 +1,6 @@
 %% function [idx] = flowSampling(OF, candidatePos, smpNb)
-function [inlierIdx, sampleIdx, bigDiffIdx] = flowSampling(traj3d, traj3dProj, flo, nFeature)
-dim3d = 3; zigma = 2; wSz = 7;
+function [inlierIdx, sampleIdx, outlierIdx] = flowSampling(traj3d, traj3dProj, flo, nFeature)
+dim3d = 3; zigma = 10; wSz = 7;
 flo_x = flo(:,:,1); flo_y = flo(:,:,2);
 mdnOF = [median(flo_x(:)), median(flo_y(:))];
 flo_x = flo_x-mdnOF(1); flo_y = flo_y-mdnOF(2);
@@ -42,16 +42,24 @@ normDiff  = [];
 %     normDiff = [normDiff, sum(sqrt(sum(tmpXYZ.*tmpXYZ,2)))/(size(trajDiff,1)/dim3d - lenTrajColumn(i))];
 % %     normDiff = [normDiff, mean(sqrt(sum(tmpXYZ.*tmpXYZ,2)))];
 % end
+outlierIdx = []; inlierIdx = [];
 for i = 1:size(trajDiff, 2)
     tmpXYZ = trajDiff(:, i); tmpXYZ = reshape(tmpXYZ, [dim3d, length(tmpXYZ)/dim3d ])';
     tmpXYZ = tmpXYZ(1:length(tmpXYZ) - lenTrajColumn(i),:);
-    tmpXYZ = tmpXYZ(2:end-1,:); 
-    normDiff = [normDiff, sum(sqrt(sum(tmpXYZ.*tmpXYZ,2)))/(size(trajDiff,1)/dim3d - lenTrajColumn(i))];
+    tmpXYZ = tmpXYZ(1:end-1,:);
+    
+%     normDiff = [normDiff, sum(sqrt(sum(tmpXYZ.*tmpXYZ,2)))/(size(trajDiff,1)/dim3d - lenTrajColumn(i))];
 %     normDiff = [normDiff, mean(sqrt(sum(tmpXYZ.*tmpXYZ,2)))];
+    if(find( (abs(tmpXYZ(:,1))+abs(tmpXYZ(:,2))) >0.6))
+        outlierIdx = [outlierIdx; i];
+    else
+        inlierIdx = [inlierIdx; i];
+    end
 end
-inlierNb = floor(0.98*length(traj3d));
-sortedNormDiff = sort(normDiff); bigDiffIdx = find(normDiff>sortedNormDiff(inlierNb));
-inlierIdx = find(normDiff<sortedNormDiff(inlierNb));
+% histDiff = hist(normDiff);
+% inlierNb = histDiff(1);%floor(0.98*length(traj3d));
+% sortedNormDiff = sort(normDiff); bigDiffIdx = find(normDiff>sortedNormDiff(inlierNb));
+% inlierIdx = find(normDiff<sortedNormDiff(inlierNb));
 traj3d = traj3d(:, inlierIdx);
 traj3dProj = traj3dProj(:, inlierIdx);
 trajDiff = trajDiff(:, inlierIdx);

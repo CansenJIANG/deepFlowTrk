@@ -187,8 +187,11 @@ plot(paramDF.cmplTrajFwd2d(1,:),   paramDF.cmplTrajFwd2d(2,:), 'sr');
 plot(paramDF.incmplTrajFwd2d(1,:), paramDF.incmplTrajFwd2d(2,:), 'sg');
 plot(paramDF.incmplTrajBwd2d(end-1,:), paramDF.incmplTrajBwd2d(end,:), 'sb');
 
-paramDF.traj3dAll = [paramDF.cmplTrajFwd3d];%, paramDF.incmplTrajFwd3d, paramDF.incmplTrajBwd3d];
-paramDF.traj2dAll = [paramDF.cmplTrajFwd2d];%, paramDF.incmplTrajFwd2d, paramDF.incmplTrajBwd2d];
+paramDF.traj3dAll = [paramDF.cmplTrajFwd3d, paramDF.incmplTrajFwd3d, paramDF.incmplTrajBwd3d];
+paramDF.traj2dAll = [paramDF.cmplTrajFwd2d, paramDF.incmplTrajFwd2d, paramDF.incmplTrajBwd2d];
+% 
+% paramDF.traj3dAll = paramDF.incmplTrajBwd3d;
+% paramDF.traj2dAll = paramDF.incmplTrajBwd2d;
 
 % incmplTraj3dFwdPcd = []; incmplTraj3dBwdPcd = [];
 % for i = 1:paramDF.incmplTrajLnth

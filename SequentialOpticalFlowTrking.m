@@ -27,6 +27,9 @@ elseif opt==4
     endSeq = paramDF.endSeq + paramDF.nExtnd+stepsDirection;
 end
 
+
+increaseNeighborhood_Flag = 0;
+
 %% Starting Frame to track
 % load velodyne points
 fid  = fopen(sprintf('%s/tracking_module/%s/velodyne/%04s/%06d.bin',...
@@ -52,8 +55,11 @@ traj3Dproj{length(traj3Dproj)+1} = proj3D;
 traj3D{length(traj3D)+1} = pts3D;
 
 % paramDF = constructVisualMemory(paramDF,proj3D, pts3D);
-[proj3D, pts3D] = increaseNeighborhood(proj3D, pts3D, 3);
-proj3D(1,proj3D(1, :)<1) = 1; proj3D(2,proj3D(2, :)<1) = 1;
+if increaseNeighborhood_Flag == 1
+    
+    [proj3D, pts3D] = increaseNeighborhood(proj3D, pts3D, 3);
+    proj3D(1,proj3D(1, :)<1) = 1; proj3D(2,proj3D(2, :)<1) = 1;
+end
 %% Compute Dense Optical Flow
 leftImgRef = imread([paramDF.leftFileDir,paramDF.imgsLeft(paramDF.staSeq).name]);
 % rightImgRef = rgb2gray(imread([rightFileDir,imgsRight(staSeq).name]));
@@ -72,7 +78,7 @@ for stepScl = 1
             imgName2 = [paramDF.leftFileDir, paramDF.imgsLeft(idxframe+stepsDirection).name];
             floName = ['./flo/', paramDF.sequence(1:end-1),'_',imgName1(end-9:end-4),'_',imgName2(end-9:end-4),'.flo'];
         end
-
+        
         im1 = im2single(imread(imgName1));
         im2 = im2single(imread(imgName2));
         deepFlowSet = [floName,' -match -kitti'];% -sintel , -middlebury
@@ -97,11 +103,11 @@ for stepScl = 1
             %             optiFlowSeq{steps*(idxframe+1-staSeq), 2} = vy;
         end
         
-%         leftImgRef = getFloMaskImg(flo, leftImgRef, im2uint8(im2));
+        %         leftImgRef = getFloMaskImg(flo, leftImgRef, im2uint8(im2));
         
         %% Project 3D to 2D
         fid  = fopen(sprintf('%s/tracking_module/%s/velodyne/%04s/%06d.bin',...
-               paramDF.base_dir, paramDF.mode, paramDF.sequence(1:end-1),idxframe-1+stepsDirection),'rb');
+            paramDF.base_dir, paramDF.mode, paramDF.sequence(1:end-1),idxframe-1+stepsDirection),'rb');
         velo = fread(fid,[4 inf],'single')';
         fclose(fid);
         
@@ -118,8 +124,10 @@ for stepScl = 1
         pts3Dtrk  = velo(ptList,1:3)'; velo_depth = velo_depth(ptList);
         proj3Dtrk  = velo_img(:,ptList);
         
-        [proj3Dtrk, pts3Dtrk] = increaseNeighborhood(proj3Dtrk, pts3Dtrk, 3);
-        proj3Dtrk(1,proj3Dtrk(1, :)<1) = 1; proj3Dtrk(2,proj3Dtrk(2, :)<1) = 1;
+        if increaseNeighborhood_Flag == 1
+            [proj3Dtrk, pts3Dtrk] = increaseNeighborhood(proj3Dtrk, pts3Dtrk, 3);
+            proj3Dtrk(1,proj3Dtrk(1, :)<1) = 1; proj3Dtrk(2,proj3Dtrk(2, :)<1) = 1;
+        end
         %% Compute OF for 2D projections on img1
         trkFeat = proj3D'; trkOF = zeros(size(trkFeat));
         for i = 1:length(trkFeat)
@@ -127,7 +135,7 @@ for stepScl = 1
             py = floor(trkFeat(i,2));
             if(trkFeat(i,1)==px && trkFeat(i,2)==py)
                 trkFeat(i,1) = trkFeat(i,1)+vx(py, px);
-                trkFeat(i,2) = trkFeat(i,2)+vy(py, px);            
+                trkFeat(i,2) = trkFeat(i,2)+vy(py, px);
             else
                 if(px<1 || px>size(im2,2)-1 ||py<1 || py>size(im2,1)-1)
                     trkFeat(i,:) = [1, 1];
@@ -153,7 +161,7 @@ for stepScl = 1
             if(trkFeat(i,1)<1 || trkFeat(i,1)>size(im2,2)-1 ||...
                     trkFeat(i,2)<1 || trkFeat(i,2)>size(im2,1)-1)
                 trkFeat(i,:) = [1, 1];
-%                 lostIdx = [lostIdx; i];
+                %                 lostIdx = [lostIdx; i];
                 outFoV = [outFoV; i];
                 continue;
             end
@@ -234,19 +242,19 @@ for stepScl = 1
             % because of in-robust.
             inRobustIdxBkw  = setdiff(find(BwdFwdErr>1.0), lostIdxBkw);
             lostIdx = [lostIdxBkw'; outFoV];
-%             if showFig
-%                 figure(1), imshow(im1);hold on; title('Occluded Flows')
-%                 plot(proj3D(1,lostIdx), proj3D(2,lostIdx),'sr');
-%                 plot(proj3D(1,outFoV), proj3D(2,outFoV),'sg');
-%             end
-%             [lostMsk, lostMskImg] = buildOcclusionMask(im1, proj3D(:,lostIdx),2);
-%             [motFuseImg, motMskImg, retrkIdx, lostTrkIdx] = motionInterpolation(paramDF, trkOF, lostIdx, lostMskImg, im1, proj3D(:,lostIdx), im2);
-%             motFuseImgName = sprintf('motMskImg_%06d.png',idxframe);
-%             imwrite(motFuseImg, motFuseImgName);
+            %             if showFig
+            %                 figure(1), imshow(im1);hold on; title('Occluded Flows')
+            %                 plot(proj3D(1,lostIdx), proj3D(2,lostIdx),'sr');
+            %                 plot(proj3D(1,outFoV), proj3D(2,outFoV),'sg');
+            %             end
+            %             [lostMsk, lostMskImg] = buildOcclusionMask(im1, proj3D(:,lostIdx),2);
+            %             [motFuseImg, motMskImg, retrkIdx, lostTrkIdx] = motionInterpolation(paramDF, trkOF, lostIdx, lostMskImg, im1, proj3D(:,lostIdx), im2);
+            %             motFuseImgName = sprintf('motMskImg_%06d.png',idxframe);
+            %             imwrite(motFuseImg, motFuseImgName);
         end
         %% Find tracked points from 2D projection of next 3d cloud
         [knnIdx, knnDist] = knnsearch(proj3Dtrk', trkFeat);
-%         lostIdx = unique([lostTrkIdx; outFoV]);
+        %         lostIdx = unique([lostTrkIdx; outFoV]);
         lostIdx = unique([lostIdx; outFoV]);
         pts3Dcorr = pts3Dtrk(:, knnIdx); pts3Dcorr(:, lostIdx) = 0;
         traj3D{length(traj3D)+1} = pts3Dcorr;
@@ -266,7 +274,7 @@ for stepScl = 1
         if showFig
             figure(300+stepsDirection), imshow(im2); hold on;
             plot(proj3D(1,:),proj3D(2,:), '.','color',[0, 1, 0]);
-%             plot(proj3D(1,retrkIdx),proj3D(2,retrkIdx), 'sr');
+            %             plot(proj3D(1,retrkIdx),proj3D(2,retrkIdx), 'sr');
         end
         
         if (idxframe == endSeq -1)
@@ -280,8 +288,10 @@ for stepScl = 1
     %     save(paramDF.traj3DName, 'traj3D');
     %     save(paramDF.traj3DprojName, 'traj3Dproj');
     %     save(paramDF.lostTraj3DName, 'lostIdx');
-    for i = 2:length(traj3D)
-        [traj3Dproj{1,i}, traj3D{1,i}, lostIdx] = decreaseNeighborhood(traj3Dproj{1, i}, traj3D{1, i}, 1);
+    if increaseNeighborhood_Flag == 1
+        for i = 2:length(traj3D)
+            [traj3Dproj{1,i}, traj3D{1,i}, lostIdx] = decreaseNeighborhood(traj3Dproj{1, i}, traj3D{1, i}, 1);
+        end
     end
     idxframe = 1;
     if(opt==1)
